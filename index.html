@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shell de Módulos Educativos</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Quicksand', sans-serif;
+            background-color: #f8fafc;
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        .sidebar {
+            width: 300px;
+            transition: all 0.3s ease;
+        }
+        .main-content {
+            flex-grow: 1;
+            background: white;
+            position: relative;
+        }
+        iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+        .module-card {
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+        .module-card:hover {
+            background-color: #f1f5f9;
+        }
+        .active-module {
+            border-left: 4px solid #3b82f6;
+            background-color: #eff6ff;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Header / Barra Superior -->
+    <header class="bg-white border-b border-slate-200 p-4 flex justify-between items-center shadow-sm z-10">
+        <div class="flex items-center gap-3">
+            <div class="bg-blue-600 p-2 rounded-lg text-white">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="9" y1="3" x2="9" y2="21"></line></svg>
+            </div>
+            <h1 class="text-xl font-bold text-slate-800 uppercase tracking-tight">Educator Shell</h1>
+        </div>
+        <div class="flex items-center gap-4">
+            <span id="status-indicator" class="text-xs font-medium px-2 py-1 rounded-full bg-slate-100 text-slate-500">Listo</span>
+        </div>
+    </header>
+
+    <div class="flex flex-1 overflow-hidden">
+        <!-- Sidebar: Gestión de Módulos -->
+        <aside class="sidebar bg-white border-r border-slate-200 flex flex-col shadow-inner">
+            <div class="p-4 border-b border-slate-100">
+                <h2 class="text-sm font-bold text-slate-500 uppercase mb-4">Añadir Módulo</h2>
+                <div class="space-y-3">
+                    <input type="text" id="mod-name" placeholder="Nombre (ej: Escritura)" 
+                           class="w-full px-3 py-2 text-sm border border-slate-200 rounded-md focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                    <input type="text" id="mod-path" placeholder="Ruta (ej: ./modulo1.html)" 
+                           class="w-full px-3 py-2 text-sm border border-slate-200 rounded-md focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                    <button onclick="registerModule()" class="w-full bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold py-2 rounded-md transition-colors flex justify-center items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                        Cargar Módulo
+                    </button>
+                </div>
+            </div>
+
+            <!-- Lista de Módulos Cargados -->
+            <div class="flex-1 overflow-y-auto p-2">
+                <h2 class="text-[10px] font-bold text-slate-400 uppercase mb-2 px-2">Módulos Registrados</h2>
+                <div id="module-list" class="space-y-1">
+                    <!-- Los módulos aparecerán aquí -->
+                </div>
+            </div>
+
+            <div class="p-4 text-center border-t border-slate-100">
+                <p class="text-[10px] text-slate-400 font-medium italic">Versión 1.0 Shell</p>
+            </div>
+        </aside>
+
+        <!-- Área de Ejecución del Módulo -->
+        <main class="main-content flex flex-col">
+            <div id="welcome-screen" class="flex-1 flex flex-col items-center justify-center text-slate-400 p-8 text-center">
+                <div class="mb-4 opacity-20">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+                </div>
+                <h3 class="text-xl font-bold text-slate-600 mb-2">No hay módulo activo</h3>
+                <p class="text-sm max-w-xs">Selecciona un módulo de la lista o añade uno nuevo mediante una ruta relativa.</p>
+            </div>
+            
+            <div id="iframe-container" class="hidden flex-1">
+                <iframe id="module-viewport" src="" title="Modulo"></iframe>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // Estado de la aplicación
+        let modules = [
+            { id: 1, name: "Práctica de Escritura", path: "practica_escritura.html" }
+        ];
+        let currentActiveId = null;
+
+        const modNameInput = document.getElementById('mod-name');
+        const modPathInput = document.getElementById('mod-path');
+        const moduleList = document.getElementById('module-list');
+        const viewport = document.getElementById('module-viewport');
+        const viewportContainer = document.getElementById('iframe-container');
+        const welcomeScreen = document.getElementById('welcome-screen');
+        const statusIndicator = document.getElementById('status-indicator');
+
+        // Registrar un nuevo módulo
+        function registerModule() {
+            const name = modNameInput.value.trim();
+            const path = modPathInput.value.trim();
+
+            if (!name || !path) {
+                alert("Por favor, introduce nombre y ruta del módulo.");
+                return;
+            }
+
+            const newModule = {
+                id: Date.now(),
+                name: name,
+                path: path
+            };
+
+            modules.push(newModule);
+            modNameInput.value = '';
+            modPathInput.value = '';
+            
+            updateList();
+            loadModule(newModule.id);
+        }
+
+        // Cargar el módulo en el iframe
+        function loadModule(id) {
+            const module = modules.find(m => m.id === id);
+            if (!module) return;
+
+            currentActiveId = id;
+            updateList();
+
+            // Actualizar Interfaz
+            welcomeScreen.classList.add('hidden');
+            viewportContainer.classList.remove('hidden');
+            
+            statusIndicator.textContent = "Cargando...";
+            statusIndicator.className = "text-xs font-medium px-2 py-1 rounded-full bg-blue-100 text-blue-600";
+
+            viewport.src = module.path;
+
+            viewport.onload = () => {
+                statusIndicator.textContent = `Activo: ${module.name}`;
+                statusIndicator.className = "text-xs font-medium px-2 py-1 rounded-full bg-green-100 text-green-600";
+            };
+
+            viewport.onerror = () => {
+                statusIndicator.textContent = "Error de carga";
+                statusIndicator.className = "text-xs font-medium px-2 py-1 rounded-full bg-red-100 text-red-600";
+            };
+        }
+
+        // Eliminar un módulo
+        function deleteModule(e, id) {
+            e.stopPropagation();
+            modules = modules.filter(m => m.id !== id);
+            if (currentActiveId === id) {
+                viewport.src = "";
+                viewportContainer.classList.add('hidden');
+                welcomeScreen.classList.remove('hidden');
+                currentActiveId = null;
+                statusIndicator.textContent = "Listo";
+                statusIndicator.className = "text-xs font-medium px-2 py-1 rounded-full bg-slate-100 text-slate-500";
+            }
+            updateList();
+        }
+
+        // Actualizar la lista en el DOM
+        function updateList() {
+            moduleList.innerHTML = '';
+            modules.forEach(mod => {
+                const isActive = mod.id === currentActiveId;
+                const div = document.createElement('div');
+                div.className = `module-card p-3 rounded-lg flex justify-between items-center group ${isActive ? 'active-module shadow-sm' : ''}`;
+                div.onclick = () => loadModule(mod.id);
+
+                div.innerHTML = `
+                    <div class="flex items-center gap-3 overflow-hidden">
+                        <div class="w-2 h-2 rounded-full ${isActive ? 'bg-blue-500' : 'bg-slate-300'}"></div>
+                        <div class="overflow-hidden">
+                            <p class="text-sm font-bold text-slate-700 truncate">${mod.name}</p>
+                            <p class="text-[10px] text-slate-400 truncate">${mod.path}</p>
+                        </div>
+                    </div>
+                    <button onclick="deleteModule(event, ${mod.id})" class="text-slate-300 hover:text-red-500 p-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                    </button>
+                `;
+                moduleList.appendChild(div);
+            });
+        }
+
+        // Inicialización
+        updateList();
+    </script>
+</body>
+</html>
