@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Módulo de Práctica de Escritura Pro</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            /* Dimensiones reales iniciales (A4) */
+            --paper-width: 210mm;
+            --paper-height: 297mm;
+            --col-count: 5;
+            --sheet-padding: 15mm;
+        }
+
+        body {
+            font-family: 'Quicksand', sans-serif;
+            background-color: #e2e8f0;
+            height: 100vh;
+            margin: 0;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Contenedor Principal */
+        .layout-container {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+            width: 100%;
+        }
+
+        /* Sidebar Naranja Metálico */
+        .sidebar-metallic {
+            width: 320px;
+            background: linear-gradient(145deg, #ff9d2e, #ff5f00, #ff9d2e);
+            border-right: 2px solid #e65100;
+            padding: 25px;
+            box-shadow: inset -2px 0 5px rgba(0,0,0,0.1), 0 0 20px rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+            color: white;
+            z-index: 20;
+        }
+
+        /* Contenedor de la Hoja (Área de Scroll) */
+        .sheet-viewer {
+            flex: 1;
+            overflow: auto;
+            padding: 40px;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            background-color: #cbd5e1;
+        }
+
+        /* Hoja Estilo Vista Previa de Impresión */
+        .main-sheet {
+            background: white;
+            width: var(--paper-width);
+            min-height: var(--paper-height);
+            padding: var(--sheet-padding);
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            border-radius: 2px;
+            position: relative;
+            transition: all 0.3s ease;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .sidebar-section-title {
+            font-weight: 800;
+            text-transform: uppercase;
+            text-align: center;
+            margin: 20px 0 10px;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+            border-bottom: 2px solid rgba(255,255,255,0.3);
+            padding-bottom: 5px;
+            font-size: 0.8rem;
+        }
+
+        /* Inputs dentro del sidebar */
+        .sidebar-input, .sidebar-select {
+            width: 100%;
+            background: rgba(255, 255, 255, 0.9);
+            border: none;
+            color: #333;
+            padding: 10px;
+            margin-bottom: 12px;
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            outline: none;
+        }
+
+        .btn-print {
+            width: 100%;
+            background: #1e293b;
+            color: white;
+            padding: 12px;
+            border-radius: 12px;
+            font-weight: 800;
+            text-transform: uppercase;
+            margin-top: 20px;
+            transition: all 0.2s;
+            box-shadow: 0 4px 0px #0f172a;
+        }
+
+        .btn-print:active {
+            transform: translateY(2px);
+            box-shadow: 0 2px 0px #0f172a;
+        }
+
+        /* Cuadros de escritura ajustados para evitar desbordamiento */
+        .practice-area {
+            display: flex;
+            align-items: flex-end;
+            gap: 2mm;
+            margin-top: 3mm;
+            max-width: 100%;
+            justify-content: center;
+        }
+
+        .box-upper, .box-lower, .box-number {
+            border: 1px dashed #94a3b8;
+            border-radius: 3px;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            color: #cbd5e1;
+            user-select: none;
+            box-sizing: border-box;
+        }
+
+        /* Dimensiones optimizadas para encajar en más columnas */
+        .box-upper, .box-number {
+            height: 16mm; 
+            width: 13mm;
+            background-color: #f8fafc;
+            border-color: #3b82f6;
+        }
+
+        .box-lower {
+            height: 10mm; 
+            width: 10mm;
+            background-color: #f0fdfa;
+            border-color: #10b981;
+        }
+
+        /* Línea de base punteada */
+        .box-upper::after, .box-lower::after, .box-number::after {
+            content: "";
+            position: absolute; 
+            bottom: 0; 
+            left: 0; 
+            right: 0;
+            border-bottom: 1px solid #94a3b8;
+            opacity: 0.5;
+        }
+
+        .letter-card {
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            padding: 2mm;
+            background: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            page-break-inside: avoid;
+            overflow: hidden;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .letter-display {
+            font-size: 1.6rem;
+            color: #1e293b;
+            font-weight: 700;
+            margin-bottom: 1mm;
+        }
+
+        .box-label {
+            font-size: 0.45rem;
+            text-transform: uppercase;
+            font-weight: bold;
+            color: #94a3b8;
+            margin-bottom: 0.5mm;
+        }
+
+        #display-name {
+            color: #e2e8f0;
+            font-size: 1.4rem;
+            font-weight: 700;
+            letter-spacing: 1.5px;
+            line-height: 1;
+        }
+
+        #grid-container {
+            display: grid;
+            grid-template-columns: repeat(var(--col-count), 1fr);
+            gap: 3mm;
+            width: 100%;
+        }
+
+        @media print {
+            @page {
+                margin: 0;
+            }
+            .no-print { display: none !important; }
+            body { padding: 0 !important; background: white !important; overflow: visible !important; height: auto !important; }
+            .layout-container { display: block !important; }
+            .sheet-viewer { padding: 0 !important; overflow: visible !important; background: white !important; display: block !important; }
+            .main-sheet { 
+                width: var(--paper-width) !important; 
+                height: var(--paper-height) !important; 
+                margin: 0 auto !important; 
+                padding: var(--sheet-padding) !important; 
+                box-shadow: none !important;
+                border: none !important;
+                border-radius: 0 !important;
+                page-break-after: always !important;
+            }
+            .box-upper, .box-lower, .box-number { background: none !important; }
+        }
+
+        .calendar-box {
+            border: 1.5px solid #3b82f6;
+            border-radius: 8px;
+            padding: 8px;
+        }
+
+        .sidebar-metallic::-webkit-scrollbar { width: 6px; }
+        .sidebar-metallic::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.3); border-radius: 10px; }
+    </style>
+</head>
+<body>
+
+    <div class="layout-container">
+        <!-- Sidebar Izquierda Metálica (Herramientas de configuración) -->
+        <aside class="sidebar-metallic no-print">
+            <h3 class="text-xl font-extrabold text-center mb-4 uppercase tracking-tighter">Panel Maestro</h3>
+            
+            <div class="sidebar-section-title">Contenido</div>
+            
+            <label class="block text-[10px] font-bold mb-1 opacity-80">MODO DE PRÁCTICA</label>
+            <select id="mode-select" onchange="setMode(this.value)" class="sidebar-select">
+                <option value="vacio">Abecedario (Vacío)</option>
+                <option value="remarcar">Abecedario (Remarcar)</option>
+                <option value="especiales">Símbolos y Acentos</option>
+                <option value="numeros">Números 1-10</option>
+                <option value="texto" selected>Texto Personalizado</option>
+            </select>
+
+            <label class="block text-[10px] font-bold mb-1 opacity-80">NOMBRE DEL ALUMNO</label>
+            <input type="text" id="name-input" placeholder="Nombre para remarcar..." oninput="updateName(this.value)" class="sidebar-input">
+
+            <div id="custom-text-container">
+                <label class="block text-[10px] font-bold mb-1 opacity-80">PALABRA PERSONALIZADA</label>
+                <input type="text" id="custom-input" oninput="render()" placeholder="Ej: Escuela" class="sidebar-input">
+            </div>
+
+            <div class="sidebar-section-title">Ajustes de Impresión</div>
+
+            <label class="block text-[10px] font-bold mb-1 opacity-80">TAMAÑO DE PAPEL</label>
+            <select id="paper-size" onchange="updatePageSettings()" class="sidebar-select">
+                <option value="a4">A4 (Estándar)</option>
+                <option value="letter">Carta (Letter)</option>
+                <option value="legal">Oficio (Legal)</option>
+            </select>
+
+            <label class="block text-[10px] font-bold mb-1 opacity-80">ORIENTACIÓN</label>
+            <select id="orientation" onchange="updatePageSettings()" class="sidebar-select">
+                <option value="portrait">Vertical</option>
+                <option value="landscape">Horizontal</option>
+            </select>
+
+            <label class="block text-[10px] font-bold mb-1 opacity-80">COLUMNAS POR FILA</label>
+            <select id="columns" onchange="updatePageSettings()" class="sidebar-select">
+                <option value="3">3 Columnas</option>
+                <option value="4">4 Columnas</option>
+                <option value="5" selected>5 Columnas</option>
+                <option value="6">6 Columnas</option>
+                <option value="7">7 Columnas</option>
+            </select>
+
+            <button onclick="window.print()" class="btn-print">
+                🖨️ Generar PDF / Imprimir
+            </button>
+        </aside>
+
+        <!-- Área de visualización de la Hoja -->
+        <div class="sheet-viewer">
+            <div class="main-sheet" id="main-sheet">
+                <!-- Encabezado Realista -->
+                <div class="grid grid-cols-4 gap-4 mb-10 items-start">
+                    <div class="col-span-3 border-b-2 border-dashed border-blue-100 h-16 flex items-end pb-2 px-2">
+                        <span class="font-bold text-slate-400 mr-4 text-sm uppercase">Alumno:</span>
+                        <div id="display-name" class="flex-grow"></div>
+                    </div>
+                    <div class="calendar-box text-center">
+                        <div class="text-[9px] font-bold text-blue-500 uppercase mb-1">Fecha</div>
+                        <div class="grid grid-cols-3 gap-1">
+                            <div class="border-b border-slate-200 h-6"></div>
+                            <div class="border-b border-slate-200 h-6"></div>
+                            <div class="border-b border-slate-200 h-6"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <h2 id="sheet-title" class="text-lg font-bold text-center text-slate-700 mb-8 uppercase tracking-widest border-b border-slate-50 pb-3">Práctica de Caligrafía</h2>
+
+                <div id="grid-container">
+                    <!-- Los elementos se renderizan aquí -->
+                </div>
+
+                <!-- Pie de página discreto -->
+                <div class="mt-auto pt-10 text-[8px] text-slate-300 text-center uppercase tracking-widest">
+                    Material Educativo • Generado para Práctica de Escritura
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentMode = 'texto';
+        const alphabet = ['Aa','Bb','Cc','Dd','Ee','Ff','Gg','Hh','Ii','Jj','Kk','Ll','Mm','Nn','Ññ','Oo','Pp','Qq','Rr','Ss','Tt','Uu','Vv','Ww','Xx','Yy','Zz'];
+        const specialChars = ['Áá','Éé','Íí','Óó','Úú','Üü','¡!','¿?','""','/','#'];
+        const numbers = ['1','2','3','4','5','6','7','8','9','10'];
+
+        const grid = document.getElementById('grid-container');
+        const sheetTitle = document.getElementById('sheet-title');
+        const customContainer = document.getElementById('custom-text-container');
+        const modeSelect = document.getElementById('mode-select');
+        const customInput = document.getElementById('custom-input');
+
+        function setMode(mode) {
+            currentMode = mode;
+            customContainer.classList.toggle('hidden', mode !== 'texto');
+            
+            const titles = {
+                vacio: "Abecedario Completo",
+                remarcar: "Trazo de Letras",
+                especiales: "Acentos y Signos",
+                numeros: "Práctica de Números",
+                texto: "Escritura Dirigida"
+            };
+            sheetTitle.textContent = titles[mode];
+            render();
+        }
+
+        function updateName(val) {
+            document.getElementById('display-name').textContent = val;
+        }
+
+        function updatePageSettings() {
+            const size = document.getElementById('paper-size').value;
+            const orientation = document.getElementById('orientation').value;
+            const cols = document.getElementById('columns').value;
+
+            let width, height;
+
+            const sizes = {
+                a4: { w: 210, h: 297 },
+                letter: { w: 215.9, h: 279.4 },
+                legal: { w: 215.9, h: 355.6 }
+            };
+
+            const selectedSize = sizes[size];
+
+            if (orientation === 'portrait') {
+                width = selectedSize.w;
+                height = selectedSize.h;
+            } else {
+                width = selectedSize.h;
+                height = selectedSize.w;
+            }
+
+            document.documentElement.style.setProperty('--paper-width', width + 'mm');
+            document.documentElement.style.setProperty('--paper-height', height + 'mm');
+            document.documentElement.style.setProperty('--col-count', cols);
+        }
+
+        function render() {
+            grid.innerHTML = '';
+            let items = [];
+
+            if (currentMode === 'vacio' || currentMode === 'remarcar') items = alphabet;
+            else if (currentMode === 'especiales') items = specialChars;
+            else if (currentMode === 'numeros') items = numbers;
+            else if (currentMode === 'texto') items = [...customInput.value || "Escritura"];
+
+            items.forEach(item => {
+                if (item.trim() === "") return;
+                
+                if (currentMode === 'numeros') {
+                    createNumberCard(item);
+                } else {
+                    const isUpper = item[0] === item[0].toUpperCase() && item[0] !== item[0].toLowerCase();
+                    const trace1 = item[0];
+                    const trace2 = item.length > 1 ? item[1] : (isUpper ? '' : item[0]);
+                    const isTracing = currentMode !== 'vacio';
+                    const isSymbol = !/[a-zñáéíóúü]/i.test(item);
+                    
+                    createLetterCard(item, trace1, trace2, isTracing, isSymbol);
+                }
+            });
+        }
+
+        function createLetterCard(display, t1, t2, isTracing, isSymbol) {
+            const card = document.createElement('div');
+            card.className = 'letter-card';
+            card.innerHTML = `
+                <div class="letter-display">${display}</div>
+                <div class="practice-area">
+                    <div class="flex flex-col items-center">
+                        <span class="box-label">${isSymbol ? 'Sim' : 'May'}</span>
+                        <div class="box-upper">${isTracing ? t1 : ''}</div>
+                    </div>
+                    <div class="flex flex-col items-center">
+                        <span class="box-label">${isSymbol ? 'Sim' : 'Min'}</span>
+                        <div class="box-lower">${isTracing ? t2 : ''}</div>
+                    </div>
+                </div>
+            `;
+            grid.appendChild(card);
+        }
+
+        function createNumberCard(num) {
+            const card = document.createElement('div');
+            card.className = 'letter-card';
+            card.innerHTML = `
+                <div class="letter-display">${num}</div>
+                <div class="practice-area">
+                    <div class="flex flex-col items-center">
+                        <span class="box-label">Guía</span>
+                        <div class="box-number">${num}</div>
+                    </div>
+                    <div class="flex flex-col items-center">
+                        <span class="box-label">Libre</span>
+                        <div class="box-number"></div>
+                    </div>
+                </div>
+            `;
+            grid.appendChild(card);
+        }
+
+        updatePageSettings();
+        render();
+    </script>
+</body>
+</html>
